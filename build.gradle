@@ -1,6 +1,3 @@
-plugins {
-    id "com.jfrog.bintray" version "1.7.3"
-}
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'maven-publish'
@@ -206,31 +203,6 @@ publishing {
                 scmNode.appendNode('developerConnection', 'scm:git:git://github.com/davidafsilva/jkeychain.git')
                 scmNode.appendNode('url', 'https://github.com/davidafsilva/jkeychain')
             }
-        }
-    }
-}
-
-// bintray configuration
-bintray {
-    user = 'davidafsilva'
-    key = System.getenv('BINTRAY_TOKEN')
-    publications = ['mavenJava']
-    pkg {
-        repo = "maven"
-        name = project.name
-        version {
-            name = project.version
-            desc = project.name + " version " + project.version
-            vcsTag = project.name + "-" + project.version
-            publish = true
-            gpg {
-                sign = true
-                passphrase = System.getenv('PGP_KEY_PASSWD')
-            }
-            //mavenCentralSync {
-            //    user = System.getenv('MVN_CENTRAL_USER_TOKEN')
-            //    password = System.getenv('MVN_CENTRAL_PASSWD_TOKEN')
-            //}
         }
     }
 }
