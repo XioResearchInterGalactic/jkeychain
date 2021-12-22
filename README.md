@@ -33,3 +33,15 @@ compile 'pt.davidafsilva.apple:jkeychain:1.0.0'
 final OSXKeychain keychain = OSXKeychain.getInstance();
 final Optional<String> mySecret = keychain.findGenericPassword("mySecret", "username");
 ```
+
+### Build locally
+
+To build locally, you need JavaJDK >= 1.8 and macOS >= 11. Make sure that you have created a softlink to your jdk at the location `/Library/Java/JavaVirtualMachines/openjdk.jdk`
+
+```bash
+# To build and test
+$ ./gradlew test
+
+# To install in the local maven repository
+$ ./gradlew publishToMavenLocal
+```

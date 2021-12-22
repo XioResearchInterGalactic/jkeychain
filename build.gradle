@@ -13,7 +13,6 @@ targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
-    jcenter()
 }
 
 // add generated sources support
@@ -42,10 +41,10 @@ task compileEnumGenerator(type: Exec) {
 
     commandLine 'gcc',
             '-arch',
-            'i386',
+            'arm64',
             '-arch',
             'x86_64',
-            '-mmacosx-version-min=10.5',
+            '-mmacosx-version-min=10.11',
             '-framework',
             'Security',
             '-std=c99',
@@ -71,16 +70,17 @@ task generateEnums(type: Exec, dependsOn: compileEnumGenerator) {
 /**
  * Generates the JNI class headers
  */
-task generateJniHeaders(type: Exec, dependsOn: [generateEnums, compileJava]) {
-    def classesDir = sourceSets.main.output.classesDir
-    if (!classesDir.exists()) classesDir.mkdirs()
-
-    commandLine 'javah',
-            '-d',
-            "${projectDir}/src/main/c",
-            '-classpath',
-            classesDir,
-            'pt.davidafsilva.apple.OSXKeychain'
+task generateJniHeaders(type: JavaCompile, dependsOn: [generateEnums]) {
+    classpath = sourceSets.main.compileClasspath
+    destinationDir file("${buildDir}/generated/jni")
+    source = sourceSets.main.java
+    options.compilerArgs += [
+            '-h', file("${projectDir}/src/main/c"),
+            '-d', file("${buildDir}/generated/jni-tmp")
+    ]
+    doLast {
+        delete file("${buildDir}/generated/jni-tmp")
+    }
 }
 
 /**
@@ -92,19 +92,19 @@ task compileSoLibrary(type: Exec, dependsOn: generateJniHeaders) {
 
     commandLine 'gcc',
             '-arch',
-            'i386',
+            'arm64',
             '-arch',
             'x86_64',
-            '-mmacosx-version-min=10.5',
+            '-mmacosx-version-min=10.11',
             '-dynamiclib',
             '-framework',
             'CoreFoundation',
             '-framework',
-            'JavaVM',
-            '-framework',
             'Security',
             '-I',
-            '/System/Library/Frameworks/JavaVM.framework/Versions/Current/Headers',
+            '/Library/Java/JavaVirtualMachines/openjdk.jdk/Contents/Home/include',
+            '-I',
+            '/Library/Java/JavaVirtualMachines/openjdk.jdk/Contents/Home/include/darwin',
             '-std=c99',
             '-pedantic',
             '-Wall',
@@ -112,12 +112,10 @@ task compileSoLibrary(type: Exec, dependsOn: generateJniHeaders) {
             "${buildDir}/libs/osxkeychain.so",
             "${projectDir}/src/main/c/pt_davidafsilva_apple_OSXKeychain.c"
 }
+compileJava.finalizedBy(compileSoLibrary)
 
 gradle.projectsEvaluated {
     compileJava.dependsOn(generateEnums)
-    compileJava.doLast {
-        tasks.compileSoLibrary.execute()
-    }
     jar {
         from sourceSets.generated.output
         from "${buildDir}/libs/osxkeychain.so"
@@ -127,7 +125,7 @@ gradle.projectsEvaluated {
         manifest.attributes(
                 "Name": rootProject.name,
                 "Implementation-Title": rootProject.name,
-                "Implementation-Version": version,
+                "Implementation-Version": archiveVersion,
                 "Implementation-Vendor": "David Silva"
         )
     }
@@ -137,10 +135,10 @@ gradle.projectsEvaluated {
 task copySoLib(type: Copy)
 copySoLib {
     from "${buildDir}/libs/"
-    into test.testClassesDir
+    into test.testClassesDirs.singleFile
     include('osxkeychain.so')
 }
-testClasses.doLast { copySoLib.execute() }
+testClasses.finalizedBy(copySoLib)
 
 /**
  * Generates source jar
@@ -167,7 +165,7 @@ artifacts {
 
 dependencies {
     // test
-    testCompile 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.2'
 }
 
 // Maven publishing support
