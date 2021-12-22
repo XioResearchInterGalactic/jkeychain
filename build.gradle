@@ -35,9 +35,10 @@ sourceSets {
  */
 task compileEnumGenerator(type: Exec) {
     def libsDir = new File(buildDir, "libs")
-    def genSourcesDir = new File(buildDir, "generated-sources")
-    if (!libsDir.exists()) libsDir.mkdirs()
-    if (!genSourcesDir.exists()) genSourcesDir.mkdirs()
+
+    doFirst {
+        libsDir.mkdirs()
+    }
 
     commandLine 'gcc',
             '-arch',
@@ -51,7 +52,7 @@ task compileEnumGenerator(type: Exec) {
             '-pedantic',
             '-Wall',
             '-o',
-            "${buildDir}/libs/generate_enums",
+            "${libsDir}/generate_enums",
             "${projectDir}/src/main/c/generate_enums.c"
 }
 
@@ -59,13 +60,16 @@ task compileEnumGenerator(type: Exec) {
  * Generates the enums Java code
  */
 task generateEnums(type: Exec, dependsOn: compileEnumGenerator) {
-    def genSources = new File(buildDir, "generated-sources/pt/davidafsilva/apple/")
-    if (!genSources.exists()) genSources.mkdirs()
-    def authType = genSources.absolutePath + '/OSXKeychainAuthenticationType.java'
-    def protocolType = genSources.absolutePath + '/OSXKeychainProtocolType.java'
+    def genSourcesDir = new File(buildDir, "generated-sources/pt/davidafsilva/apple/")
+    def authType = new File(genSourcesDir, 'OSXKeychainAuthenticationType.java').absolutePath
+    def protocolType =  new File(genSourcesDir, 'OSXKeychainProtocolType.java').absolutePath
+    doFirst {
+        genSourcesDir.mkdirs()
+    }
 
     commandLine "${buildDir}/libs/generate_enums", authType, protocolType
 }
+compileJava.dependsOn(generateEnums)
 
 /**
  * Generates the JNI class headers
@@ -75,12 +79,8 @@ task generateJniHeaders(type: JavaCompile, dependsOn: [generateEnums]) {
     destinationDir file("${buildDir}/generated/jni")
     source = sourceSets.main.java
     options.compilerArgs += [
-            '-h', file("${projectDir}/src/main/c"),
-            '-d', file("${buildDir}/generated/jni-tmp")
+            '-h', file("${projectDir}/src/main/c")
     ]
-    doLast {
-        delete file("${buildDir}/generated/jni-tmp")
-    }
 }
 
 /**
@@ -88,7 +88,10 @@ task generateJniHeaders(type: JavaCompile, dependsOn: [generateEnums]) {
  */
 task compileSoLibrary(type: Exec, dependsOn: generateJniHeaders) {
     def libsDir = new File(buildDir, "libs")
-    if (!libsDir.exists()) libsDir.mkdirs()
+
+    doFirst {
+        libsDir.mkdirs()
+    }
 
     commandLine 'gcc',
             '-arch',
@@ -109,13 +112,12 @@ task compileSoLibrary(type: Exec, dependsOn: generateJniHeaders) {
             '-pedantic',
             '-Wall',
             '-o',
-            "${buildDir}/libs/osxkeychain.so",
+            "${libsDir}/osxkeychain.so",
             "${projectDir}/src/main/c/pt_davidafsilva_apple_OSXKeychain.c"
 }
 compileJava.finalizedBy(compileSoLibrary)
 
 gradle.projectsEvaluated {
-    compileJava.dependsOn(generateEnums)
     jar {
         from sourceSets.generated.output
         from "${buildDir}/libs/osxkeychain.so"
