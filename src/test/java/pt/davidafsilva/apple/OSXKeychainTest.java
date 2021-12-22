@@ -1,113 +1,77 @@
 package pt.davidafsilva.apple;
 
-import junit.framework.TestCase;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
-/**
- * Test the OSXKeychainTest class.
- *
- * @author Conor McDermottroe
- */
-public class OSXKeychainTest
-    extends TestCase {
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-  /**
-   * The keychain instance to test.
-   */
-  private OSXKeychain keychain;
+@TestMethodOrder(OrderAnnotation.class)
+public class OSXKeychainTest {
 
-  /**
-   * Try to insert, read and delete a generic password.
-   */
-  public void testRoundTripGenericPassword() {
+  private static final String SERVICE = "jkeychain_service";
+  private static final String KEY = "jkeychain_key";
+  private static final String INITIAL_PASSWORD = "jkeychain_password_v1";
+  private static final String UPDATED_PASSWORD = "jkeychain_password_v2";
+
+  private static OSXKeychain keychain;
+
+  @BeforeAll
+  static void setup() {
     initKeychain();
-
-    final String serviceName = "testRoundTripGenericPassword_service";
-    final String userName = "testRoundTripGenericPassword_username";
-    final String password = "testRoundTripGenericPassword_password";
-
-    // Add it to the keychain.
-    try {
-      keychain.addGenericPassword(serviceName, userName, password);
-    } catch (OSXKeychainException e) {
-      fail("Failed to add a generic password.");
-    }
-
-    // Retrieve it from the keychain
-    try {
-      String pass = keychain.findGenericPassword(serviceName, userName).orElse(null);
-      assertEquals("Retrieved password did not match.", password, pass);
-    } catch (OSXKeychainException e) {
-      fail("Failed to retrieve generic password");
-    }
-
-    // Delete it from the keychain.
-    try {
-      keychain.deleteGenericPassword(serviceName, userName);
-    } catch (OSXKeychainException e) {
-      fail("Failed to delete generic password");
-    }
   }
 
-  /**
-   * Try to insert, read and delete a generic password.
-   */
-  public void testUpdateGenericPassword() {
-    initKeychain();
-
-    final String serviceName = "testUpdateGenericPassword_service";
-    final String userName = "testUpdateGenericPassword_username";
-    final String password1 = "testUpdateGenericPassword_pw1";
-    final String password2 = "testUpdateGenericPassword_pw2";
-
-    // Add it to the keychain.
-    try {
-      keychain.addGenericPassword(serviceName, userName, password1);
-    } catch (OSXKeychainException e) {
-      fail("Failed to add a generic password.");
-    }
-
-    // Retrieve it from the keychain
-    try {
-      String pass = keychain.findGenericPassword(serviceName, userName).orElse(null);
-      assertEquals("Retrieved password did not match.", password1, pass);
-    } catch (OSXKeychainException e) {
-      e.printStackTrace();
-      fail("Failed to retrieve generic password");
-    }
-
-    // Modify the existing item in the keychain.
-    try {
-      keychain.modifyGenericPassword(serviceName, userName, password2);
-    } catch (OSXKeychainException e) {
-      fail("Failed to update a generic password.");
-    }
-
-    // Retrieve it from the keychain, expect the updated password now
-    try {
-      String pass = keychain.findGenericPassword(serviceName, userName).orElse(null);
-      assertEquals("Retrieved password did not match.", password2, pass);
-    } catch (OSXKeychainException e) {
-      fail("Failed to retrieve generic password");
-    }
-
-    // Delete it from the keychain.
-    try {
-      keychain.deleteGenericPassword(serviceName, userName);
-    } catch (OSXKeychainException e) {
-      fail("Failed to delete generic password");
-    }
+  @Test
+  @Order(1)
+  public void addGenericPassword() {
+    assertDoesNotThrow(
+        () -> keychain.addGenericPassword(SERVICE, KEY, INITIAL_PASSWORD),
+        "failed to add a generic password"
+    );
   }
 
-  /**
-   * Initialize the keychain for testing.
-   */
-  private void initKeychain() {
-    try {
-      if (keychain == null) {
-        keychain = OSXKeychain.getInstance();
-      }
-    } catch (OSXKeychainException e) {
-      fail("Failed to initialize keychain");
-    }
+  @Test
+  @Order(2)
+  public void findInitialGenericPassword() {
+    String pass = assertDoesNotThrow(
+        () -> keychain.findGenericPassword(SERVICE, KEY).orElse(null),
+        "Failed to retrieve generic password"
+    );
+    assertEquals(INITIAL_PASSWORD, pass, "retrieved password did not match");
+  }
+
+  @Test
+  @Order(3)
+  public void modifyGenericPassword() {
+    assertDoesNotThrow(
+        () -> keychain.modifyGenericPassword(SERVICE, KEY, UPDATED_PASSWORD),
+        "failed to update a generic password"
+    );
+  }
+
+  @Test
+  @Order(4)
+  public void findUpdatedGenericPassword() {
+    String pass = assertDoesNotThrow(
+        () -> keychain.findGenericPassword(SERVICE, KEY).orElse(null),
+        "Failed to retrieve generic password"
+    );
+    assertEquals(UPDATED_PASSWORD, pass, "retrieved password did not match");
+  }
+
+  @Test
+  @Order(5)
+  public void deleteGenericPassword() {
+    assertDoesNotThrow(
+        () -> keychain.deleteGenericPassword(SERVICE, KEY),
+        "failed to delete a generic password"
+    );
+  }
+
+  private static void initKeychain() {
+    keychain = assertDoesNotThrow(OSXKeychain::getInstance, "failed to initialize keychain");
   }
 }
