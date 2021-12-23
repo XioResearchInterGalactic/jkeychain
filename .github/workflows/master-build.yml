@@ -22,7 +22,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup environment variables
-        run: echo "C_INCLUDE_PATH=$JAVA_HOME/include" >> $GITHUB_ENV
+        run: echo "C_INCLUDE_PATH=$JAVA_HOME/include:$JAVA_HOME/include/darwin" >> $GITHUB_ENV
 
       - name: Run build
         run: ./gradlew build
