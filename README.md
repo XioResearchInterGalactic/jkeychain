@@ -40,19 +40,27 @@ dependencies {
 ### Example:
 
 ```java
-final OSXKeychain keychain=OSXKeychain.getInstance();
-final Optional<String> accKey=keychain.findGenericPassword("acc","key");
+final OSXKeychain keychain = OSXKeychain.getInstance();
+final Optional<String> appKey = keychain.findGenericPassword("application", "key");
 ```
 
 ## Build
 
 To build locally, you need JavaJDK >= 1.8 and macOS >= 11. Make sure that you have a softlink to your jdk
-at `/Library/Java/JavaVirtualMachines/openjdk.jdk`
-
+at `/Library/Java/JavaVirtualMachines/openjdk.jdk`.
+Please run the command below to execute the tests and build the final package (jar).
 ```shell
-# To build and test
 $ ./gradlew build
+```
 
-# To install in the local maven repository
+### Integration
+
+To test the integration with locally modified versions of the API, you can:
+1. Commit the changes to your local branch (fork)
+2. Build and publish a new snapshot version to your local maven repository
+3. Import the snapshot version in your project.
+
+To accomplish 2. please run the command below.
+```shell
 $ ./gradlew publishToMavenLocal
 ```
