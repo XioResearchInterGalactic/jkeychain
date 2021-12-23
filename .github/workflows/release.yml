@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK
+      - name: Setup JDK
         uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
@@ -60,6 +60,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 8
+
+      - name: Setup environment variables
+        run: echo "C_INCLUDE_PATH=$JAVA_HOME/include:$JAVA_HOME/include/darwin" >> $GITHUB_ENV
 
       - name: Build artifacts
         run: ./gradlew clean build -x test -x check
