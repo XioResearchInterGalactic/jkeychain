@@ -1,7 +1,3 @@
-import pl.allegro.tech.build.axion.release.domain.ChecksConfig
-import pl.allegro.tech.build.axion.release.domain.RepositoryConfig
-import pl.allegro.tech.build.axion.release.domain.TagNameSerializationConfig
-
 // register repositories for both buildscript and application
 buildscript.repositories.registerRepositories()
 repositories.registerRepositories()
@@ -10,23 +6,23 @@ plugins {
     idea
     java
     `maven-publish`
-    signing
     id("pl.allegro.tech.build.axion-release")
+    id("org.jreleaser")
     id("code-generation")
 }
 
-group = "pt.davidafsilva.apple"
+group = "org.merlyn.oss"
 scmVersion {
-    tag(closureOf<TagNameSerializationConfig> {
+    tag {
         prefix = "v"
         versionSeparator = ""
-    })
-    checks(closureOf<ChecksConfig> {
-        isUncommittedChanges = false
-    })
-    repository(closureOf<RepositoryConfig> {
+    }
+    checks {
+        uncommittedChanges = false
+    }
+    repository {
         pushTagsOnly = true
-    })
+    }
 }
 version = scmVersion.version
 
@@ -37,8 +33,8 @@ dependencies {
 }
 
 configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
     withSourcesJar()
     withJavadocJar()
 }
@@ -46,16 +42,7 @@ configure<JavaPluginExtension> {
 configure<PublishingExtension> {
     repositories {
         maven {
-            name = "Sonatype"
-            val repository = when {
-                version.toString().endsWith("-SNAPSHOT") -> "/content/repositories/snapshots/"
-                else -> "/service/local/staging/deploy/maven2/"
-            }
-            setUrl("https://s01.oss.sonatype.org/$repository")
-            credentials {
-                username = System.getenv("OSSRH_USER")
-                password = System.getenv("OSSRH_TOKEN")
-            }
+            setUrl(layout.buildDirectory.dir("staging-deploy"))
         }
     }
 
@@ -66,11 +53,11 @@ configure<PublishingExtension> {
             artifactId = project.name
             version = project.version.toString()
             pom {
-                val githubRepoUrl = "https://github.com/davidafsilva/jkeychain"
+                val githubRepoUrl = "https://github.com/XioResearchInterGalactic/jkeychain"
 
                 name.set(project.name)
-                description.set("https://github.com/davidafsilva/jkeychain")
-                url.set("https://github.com/davidafsilva/jkeychain")
+                description.set("https://github.com/XioResearchInterGalactic/jkeychain")
+                url.set("https://github.com/XioResearchInterGalactic/jkeychain")
                 inceptionYear.set("2017")
                 licenses {
                     license {
@@ -83,6 +70,11 @@ configure<PublishingExtension> {
                         id.set("davidafsilva")
                         name.set("David Silva")
                         url.set("https://github.com/davidafsilva")
+                    }
+                    developer {
+                        id.set("xrubioj-merlyn")
+                        name.set("Xavier Rubio Jansana")
+                        url.set("https://merlyn.org")
                     }
                 }
                 scm {
@@ -97,15 +89,26 @@ configure<PublishingExtension> {
     }
 }
 
-configure<SigningExtension> {
-    val signingGpgKey: String? by project
-    val signingGpgKeyId: String? by project
-    val signingGpgKeyPassword: String? by project
-    if (signingGpgKey != null && signingGpgKeyId != null && signingGpgKeyPassword != null) {
-        useInMemoryPgpKeys(signingGpgKeyId, signingGpgKey, signingGpgKeyPassword)
+jreleaser {
+    signing {
+        setActive("ALWAYS")
+        armored = true
     }
-
-    sign(publishing.publications.getByName("artifacts"))
+    deploy {
+        maven {
+            mavenCentral {
+                create("sonatype") {
+                    setActive("ALWAYS")
+                    url = "https://central.sonatype.com/api/v1/publisher"
+                    stagingRepository("build/staging-deploy")
+                    setAuthorization("BEARER")
+                    username = System.getenv("JRELEASER_MAVENCENTRAL_USERNAME")
+                    // snapshotSupported = true
+                    applyMavenCentralRules = true
+                }
+            }
+        }
+    }
 }
 
 tasks {
