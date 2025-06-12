@@ -24,6 +24,10 @@ public class OSXKeychain {
    */
   private static OSXKeychain instance;
 
+  private static final String libraryName = "osxkeychain";
+  private static final String libraryExtension = ".dylib";
+  private static final String libraryNameWithExtension = libraryName + libraryExtension;
+
   /**
    * Prevent this class from being instantiated directly.
    */
@@ -42,7 +46,7 @@ public class OSXKeychain {
       try {
         loadSharedObject();
       } catch (IOException e) {
-        throw new pt.davidafsilva.apple.OSXKeychainException("Failed to load osxkeychain.so", e);
+        throw new pt.davidafsilva.apple.OSXKeychainException("Failed to load " + libraryNameWithExtension, e);
       }
       instance = new OSXKeychain();
     }
@@ -198,12 +202,35 @@ public class OSXKeychain {
    * @throws IOException If the shared object could not be loaded.
    */
   private static void loadSharedObject() throws IOException {
+
+    String appDir = System.getProperty("app.dir");
+    if (appDir != null) {
+      // && means app.dir
+      // Windows: -Djava.library.path=&&;&&..\bin
+      // macOS:   -Djava.library.path=&&/../runtime/Contents/Home/lib:&&
+      String os = System.getProperty("os.name").toLowerCase();
+      if (os.contains("win")) {
+        if (tryLoadLibrary(appDir, libraryNameWithExtension)) return;
+        if (tryLoadLibrary(appDir, "..\\bin", libraryNameWithExtension)) return;
+      } else {
+        if (tryLoadLibrary(appDir, "../runtime/Contents/Home/lib", libraryNameWithExtension)) return;
+        if (tryLoadLibrary(appDir, libraryNameWithExtension)) return;
+      }
+    }
+
+    try {
+      System.loadLibrary(libraryName);
+      return;
+    } catch (Throwable t) {
+      // Ignore the error, fall back to loading from resource (used in development)
+    }
+
     // Stream the library out of the JAR
-    final File tmpFile = File.createTempFile("osxkeychain", ".so");
-    try (InputStream soInJarStream = OSXKeychain.class.getResourceAsStream("/osxkeychain.so");
-        OutputStream soInTmpStream = new FileOutputStream(tmpFile)) {
+    final File tmpFile = File.createTempFile(libraryName, libraryExtension);
+    try (InputStream soInJarStream = OSXKeychain.class.getResourceAsStream("/" + libraryNameWithExtension);
+         OutputStream soInTmpStream = new FileOutputStream(tmpFile)) {
       // Put the library in a temp file.
-      File soInTmp = File.createTempFile("osxkeychain", ".so");
+      File soInTmp = File.createTempFile(libraryName, libraryExtension);
       soInTmp.deleteOnExit();
 
       // Copy the .so
@@ -216,6 +243,25 @@ public class OSXKeychain {
 
     // Now load the library
     System.load(tmpFile.getAbsolutePath());
+  }
+
+  private static boolean tryLoadLibrary(String... pathElements) {
+    File file = null;
+    for (String pathElement : pathElements) {
+      if (file == null)
+        file = new File(pathElement);
+      else
+        file = new File(file, pathElement);
+    }
+    if (file == null) {
+      return false;
+    }
+    try {
+      System.load(file.getAbsolutePath());
+      return true;
+    } catch (Throwable ignored) {
+    }
+    return false;
   }
 
   /* ********************************* */

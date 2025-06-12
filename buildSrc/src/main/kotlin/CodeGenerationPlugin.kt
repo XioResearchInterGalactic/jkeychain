@@ -52,7 +52,7 @@ class CodeGenerationPlugin : Plugin<Project> {
     private fun Project.registerSoGenerationTasks(generateEnumsTask: TaskProvider<out Task>) {
         val soFile = buildDir.resolve("generated")
             .resolve("libs")
-            .resolve("osxkeychain.so")
+            .resolve("osxkeychain.dylib")
         val sourceSets = extensions.findByType(JavaPluginExtension::class.java)!!.sourceSets
 
         // generate the .h header
