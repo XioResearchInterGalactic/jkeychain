@@ -71,7 +71,7 @@ jobs:
         run: ./gradlew publish
 
       - name: Deploy and release
-        run: ./gradlew publishArtifactsPublicationToSonatypeRepository
+        run: ./gradlew jreleaserFullRelease
         env:
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           JRELEASER_MAVENCENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
