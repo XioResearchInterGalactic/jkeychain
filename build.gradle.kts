@@ -93,6 +93,7 @@ jreleaser {
     signing {
         setActive("ALWAYS")
         armored = true
+        verify = true
     }
     deploy {
         maven {
